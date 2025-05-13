@@ -374,22 +374,30 @@ import { checkIsMobile } from "./styles/helpers.js";
     const container = document.createElement("div");
     container.className = "category-buttons";
 
-    for (let cat in categories) {
-      if (Object.prototype.hasOwnProperty.call(categories, cat)) {
-        const btn = document.createElement("button");
-        btn.className = "category-button";
-        btn.innerHTML = categoryEmojis[cat];
-        btn.dataset.category = cat;
-        btn.title = cat;
-        if (cat === state.activeCategory) btn.classList.add("active");
-        if (cat === "Favourites" && categories.Favourites.length === 0) btn.classList.add("disabled");
+    Object.keys(categories).forEach(cat => {
+      const btn = document.createElement("button");
+      btn.className = [
+        "category-button",
+        cat === state.activeCategory && "active",
+        cat === "Favourites" && !categories.Favourites.length && "disabled"
+      ].filter(Boolean).join(" ");
+      btn.dataset.category = cat;
+      btn.innerHTML = categoryEmojis[cat];
+      btn.title = cat;
+      container.appendChild(btn);
+    });
 
-        if (cat === "Favourites") btn.addEventListener("click", handleFavouritesClick);
-        btn.addEventListener("click", (e) => handleCategoryClick(cat, e));
-
-        container.appendChild(btn);
+    container.addEventListener("click", e => {
+      const btn = e.target.closest("button.category-button");
+      if (!btn) return;
+      const cat = btn.dataset.category;
+      if (cat === "Favourites" && e.ctrlKey) {
+        handleFavouritesClick(e);
+      } else {
+        handleCategoryClick(cat, e);
       }
-    }
+    });
+
     return container;
   }
 
@@ -452,62 +460,76 @@ import { checkIsMobile } from "./styles/helpers.js";
 
     state.currentSortedEmoticons = getSortedEmoticons(category);
 
-    const promises = [];
-    state.currentSortedEmoticons.forEach((emoticon) => {
+    // Preload images and populate DOM
+    const loadPromises = state.currentSortedEmoticons.map(emoticon => {
       const btn = document.createElement("button");
       btn.className = "emoticon-button";
+      btn.title = emoticon;
       const imgSrc = `/img/smilies/${emoticon}.gif`;
       btn.innerHTML = `<img src="${imgSrc}" alt="${emoticon}">`;
-      btn.title = emoticon;
 
+      // mark selected/favorite
       if (emoticon === state.lastUsedEmoticons[state.activeCategory]) {
         btn.classList.add("selected");
       } else if (state.activeCategory !== "Favourites" && isEmoticonFavorite(emoticon)) {
         btn.classList.add("favorite");
       }
 
-      promises.push(new Promise(resolve => {
+      container.appendChild(btn);
+
+      // return promise that resolves when image loads
+      return new Promise(resolve => {
         const img = new Image();
         img.onload = resolve;
         img.src = imgSrc;
-      }));
-
-      btn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        if (e.shiftKey) {
-          insertEmoticonCode(emoticon);
-        } else if (e.ctrlKey) {
-          const fav = JSON.parse(localStorage.getItem("favoriteEmoticons")) || [];
-          const pos = fav.indexOf(emoticon);
-          if (category === "Favourites" && pos !== -1) {
-            fav.splice(pos, 1);
-            categories.Favourites.splice(pos, 1);
-          } else if (category !== "Favourites" && !fav.includes(emoticon)) {
-            fav.push(emoticon);
-            categories.Favourites.push(emoticon);
-          }
-          localStorage.setItem("favoriteEmoticons", JSON.stringify(fav));
-          updateCategoryButtonsState(category);
-          if (category === "Favourites") updateEmoticonsContainer();
-        } else {
-          insertEmoticonCode(emoticon);
-          incrementEmoticonUsage(emoticon);
-          state.lastUsedEmoticons[state.activeCategory] = emoticon;
-          localStorage.setItem("lastUsedEmoticons", JSON.stringify(state.lastUsedEmoticons));
-          if (!state.isMobile) removeEmoticonsPopup();
-        }
-        updateEmoticonHighlight();
       });
-
-      container.appendChild(btn);
     });
 
-    await Promise.all(promises);
+    // Delegate all click handling to the container
+    container.addEventListener("click", e => {
+      const btn = e.target.closest("button.emoticon-button");
+      if (!btn) return;
+      e.stopPropagation();
+
+      const emoticon = btn.title;
+
+      if (e.shiftKey) {
+        insertEmoticonCode(emoticon);
+
+      } else if (e.ctrlKey) {
+        // toggle favorite
+        const fav = JSON.parse(localStorage.getItem("favoriteEmoticons")) || [];
+        const idx = fav.indexOf(emoticon);
+        if (category === "Favourites" && idx !== -1) {
+          fav.splice(idx, 1);
+          categories.Favourites.splice(idx, 1);
+        } else if (category !== "Favourites" && idx === -1) {
+          fav.push(emoticon);
+          categories.Favourites.push(emoticon);
+        }
+        localStorage.setItem("favoriteEmoticons", JSON.stringify(fav));
+        updateCategoryButtonsState(category);
+        if (category === "Favourites") updateEmoticonsContainer();
+
+      } else {
+        insertEmoticonCode(emoticon);
+        incrementEmoticonUsage(emoticon);
+        state.lastUsedEmoticons[state.activeCategory] = emoticon;
+        localStorage.setItem("lastUsedEmoticons", JSON.stringify(state.lastUsedEmoticons));
+        if (!state.isMobile) removeEmoticonsPopup();
+      }
+
+      updateEmoticonHighlight();
+    });
+
+    // wait for all images, then set grid sizing
+    await Promise.all(loadPromises);
     const { maxImageWidth, maxImageHeight } = await calculateMaxImageDimensions(state.currentSortedEmoticons);
     Object.assign(container.style, {
       gridTemplateColumns: `repeat(auto-fit, minmax(${maxImageWidth}px, 1fr))`,
       gridAutoRows: `minmax(${maxImageHeight}px, auto)`
     });
+
     return container;
   }
 
