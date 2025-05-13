@@ -8,6 +8,8 @@
   font-size: 1.4em;
 }
 
+$UIGap: 0.5em;
+
 .emoticons-popup {
   border-radius: 0.4em !important;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12), 0 4px 6px rgba(0, 0, 0, 0.04),
@@ -17,23 +19,23 @@
   position: fixed;
   display: grid;
   grid-template-rows: 50px auto;
-  padding: 0.5em;
-  gap: 0.5em;
+  padding: $UIGap;
+  gap: $UIGap;
   background-color: var(--popup-background);
   z-index: 2000;
   top: 20vh;
   left: 50vw;
   transform: translateX(-50%);
-  max-width: 50vw;
   min-width: 300px;
-  width: 50vw;
-  max-height: 50vh;
+  width: 800px;
+  max-height: 70vh;
   overflow: hidden;
 
   .header-buttons {
     display: flex;
     flex-direction: row;
     justify-content: space-between;
+    gap: $UIGap;
 
     .clear-button {
       @include button-styles;
@@ -47,7 +49,7 @@
     .category-buttons {
       display: flex;
       justify-content: center;
-      gap: 0.5em;
+      gap: $UIGap;
 
       .category-button {
         @include button-styles;
@@ -80,10 +82,10 @@
 
   .emoticon-buttons {
     display: grid;
-    gap: 0.5em;
+    gap: $UIGap;
     overflow-y: auto;
     overflow-x: hidden;
-    max-height: calc(-80px + 50vh);
+    max-height: calc(-80px + 70vh);
     scrollbar-width: none;
     &::-webkit-scrollbar {
       display: none;
@@ -115,6 +117,50 @@
 
       &:hover {
         background: var(--hover-button);
+      }
+    }
+  }
+}
+
+@media screen and (max-width: 800px) {
+  .emoticons-popup {
+    width: 100%;
+  }
+}
+
+@media screen and (max-width: 500px) {
+  .emoticons-popup {
+    display: flex;
+    flex-direction: row;
+
+    .header-buttons {
+      flex-direction: column;
+      justify-content: flex-start;
+
+      .close-button {
+        order: 1;
+      }
+
+      .clear-button {
+        order: 2;
+      }
+
+      .category-buttons {
+        flex-direction: column;
+        order: 3;
+      }
+    }
+
+    .emoticon-buttons {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      height: fit-content;
+
+      .emoticon-button {
+        min-height: 40px;
+        min-width: 40px;
+        height: fit-content;
       }
     }
   }
