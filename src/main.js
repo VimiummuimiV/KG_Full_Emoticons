@@ -76,7 +76,11 @@ import { checkIsMobile } from "./styles/helpers.js";
 
   function getAdjustedBackground(type) {
     const adjustments = {
-      popupBackground: 10, defaultButton: 15, hoverButton: 25, activeButton: 35, selectedButton: 45
+      popupBackground: 10,
+      defaultButton: 15,
+      hoverButton: 25,
+      activeButton: 35,
+      selectedButton: 50 
     };
     const adjustment = adjustments[type] || 0;
     const adjustedLightness = bodyLightness < 50 ? bodyLightness + adjustment : bodyLightness - adjustment;
@@ -333,13 +337,13 @@ import { checkIsMobile } from "./styles/helpers.js";
       return btn;
     };
 
-    const clearButton = createBtn("clear-button", "Clear usage data", clearSVG, () => {
+    const clearButton = createBtn("header-button clear-button", "Clear usage data", clearSVG, () => {
       if (confirm("Clear emoticon usage data?")) {
         localStorage.removeItem("emoticonUsageData");
       }
     });
 
-    const closeButton = createBtn("close-button", "Close emoticons panel", closeSVG, removeEmoticonsPopup);
+    const closeButton = createBtn("header-button close-button", "Close emoticons panel", closeSVG, removeEmoticonsPopup);
 
     headerButtons.appendChild(clearButton);
     headerButtons.appendChild(createCategoryContainer());

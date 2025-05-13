@@ -1,4 +1,22 @@
-@import url('https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap");
+
+:root {
+  --active-button-mixed: color-mix(
+    in srgb,
+    var(--third-accent-color) 40%,
+    transparent 60%
+  );
+  --saved-button-mixed: color-mix(
+    in srgb,
+    var(--fourth-accent-color) 40%,
+    transparent 60%
+  );
+  --hover-button-mixed: color-mix(
+    in srgb,
+    var(--third-accent-color) 25%,
+    transparent 85%
+  );
+}
 
 @mixin button-styles {
   border-radius: 0.2em !important;
@@ -14,8 +32,7 @@ $UIGap: 0.5em;
 
 .emoticons-popup {
   border-radius: 0.4em !important;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12), 0 4px 6px rgba(0, 0, 0, 0.04),
-    0 2px 2px rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
   opacity: 0;
   transition: opacity 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
   position: fixed;
@@ -23,7 +40,8 @@ $UIGap: 0.5em;
   grid-template-rows: 50px auto;
   padding: $UIGap;
   gap: $UIGap;
-  background-color: var(--popup-background);
+  background-color: var(--background-color, var(--popup-background));
+  border: 1px solid var(--border-color, transparent);
   z-index: 2000;
   top: 20vh;
   left: 50vw;
@@ -42,9 +60,28 @@ $UIGap: 0.5em;
     .clear-button {
       @include button-styles;
       background: hsl(40deg 50% 15%);
+      border: 2px solid hsl(40deg 50% 25%);
 
       svg {
         stroke: hsl(40deg 50% 60%);
+      }
+    }
+
+    .close-button {
+      @include button-styles;
+      background: hsl(0deg 50% 15%);
+      border: 2px solid hsl(0deg 50% 25%);
+
+      svg {
+        stroke: hsl(0deg 50% 60%);
+      }
+    }
+
+    .header-button {
+      transition: filter 0.15s;
+
+      &:hover {
+        filter: brightness(1.1);
       }
     }
 
@@ -56,29 +93,20 @@ $UIGap: 0.5em;
 
       .category-button {
         @include button-styles;
-        background: var(--default-button);
+        background: var(--highlight-color, var(--default-button));
 
         &.active {
-          background: var(--active-button);
+          background: var(--active-button-mixed, var(--active-button));
         }
 
         &:hover {
-          background: var(--hover-button);
+          background: var(--hover-button-mixed, var(--hover-button));
         }
 
         &.disabled {
           opacity: 0.5;
           pointer-events: none;
         }
-      }
-    }
-
-    .close-button {
-      @include button-styles;
-      background: hsl(0deg 50% 15%);
-
-      svg {
-        stroke: hsl(0deg 50% 60%);
       }
     }
   }
@@ -101,7 +129,7 @@ $UIGap: 0.5em;
       border: none;
       cursor: pointer;
       position: relative;
-      background: var(--default-button);
+      background: var(--highlight-color, var(--default-button));
       padding: 0;
 
       img {
@@ -109,16 +137,15 @@ $UIGap: 0.5em;
       }
 
       &.selected {
-        background: var(--selected-button);
-        filter: sepia(0.7);
+        background: var(--active-button-mixed, var(--selected-button));
       }
 
       &.favorite {
-        background: var(--active-button);
+        background: var(--saved-button-mixed, var(--active-button));
       }
 
       &:hover {
-        background: var(--hover-button);
+        background: var(--hover-button-mixed, var(--hover-button));
       }
     }
   }
@@ -142,12 +169,16 @@ $UIGap: 0.5em;
   border-radius: 0.4em 0 0 0.4em !important;
   cursor: pointer !important;
   transition: background 0.2s ease, opacity 0.2s ease !important;
+
+  &:hover {
+    background-color: var(--background-color, #17191c80) !important;
+  }
 }
 
 @media screen and (max-width: 1200px) {
   .emoticons-popup {
     width: 100%;
-    top: 30px; 
+    top: 30px;
     max-height: 70vh;
 
     .emoticon-buttons {
