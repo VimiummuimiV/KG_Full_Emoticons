@@ -1,6 +1,7 @@
 import "./styles/styles.scss"
 import { categories, categoryEmojis } from "./data/definitions.js";
 import { clearSVG, closeSVG } from "./data/icons.js";
+import { checkIsMobile } from "./styles/helpers.js";
 
 (function () {
   // State management
@@ -13,7 +14,8 @@ import { clearSVG, closeSVG } from "./data/icons.js";
     lastFocusedInput: null,
     latestCategoryRequest: null,
     lastKeyTimes: {},
-    lastUsedEmoticons: JSON.parse(localStorage.getItem("lastUsedEmoticons")) || {}
+    lastUsedEmoticons: JSON.parse(localStorage.getItem("lastUsedEmoticons")) || {},
+    isMobile: checkIsMobile()
   };
 
   // Helper function to handle double key presses
@@ -268,6 +270,25 @@ import { clearSVG, closeSVG } from "./data/icons.js";
     }
   }
 
+  // Define a helper to create the mobile toggle button
+  function createEmoticonsMobileToggleButton() {
+    const mobileToggleBtn = document.createElement("button");
+    mobileToggleBtn.className = "emoticons-mobile-toggle"; // for styling elsewhere
+    mobileToggleBtn.title = "Open emoticons panel";
+    mobileToggleBtn.innerHTML = categoryEmojis[state.activeCategory] || "😊";
+
+    // Toggle popup on tap
+    mobileToggleBtn.addEventListener("click", toggleEmoticonsPopup);
+
+    // Append to body (or your preferred container)
+    document.body.appendChild(mobileToggleBtn);
+  }
+
+  // Inside your main IIFE, after setting up `state` and CSS variables (but before global event listeners):
+  if (state.isMobile) {
+    createEmoticonsMobileToggleButton();
+  }
+
   // UI creation
   function createEmoticonsPopup(category) {
     if (state.isPopupCreated) return;
@@ -447,7 +468,7 @@ import { clearSVG, closeSVG } from "./data/icons.js";
           incrementEmoticonUsage(emoticon);
           state.lastUsedEmoticons[state.activeCategory] = emoticon;
           localStorage.setItem("lastUsedEmoticons", JSON.stringify(state.lastUsedEmoticons));
-          removeEmoticonsPopup();
+          if (!state.isMobile) removeEmoticonsPopup();
         }
         updateEmoticonHighlight();
       });
