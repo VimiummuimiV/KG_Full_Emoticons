@@ -45,11 +45,15 @@ import { checkIsMobile } from "./styles/helpers.js";
   };
 
   // Set CSS variables
-  document.documentElement.style.setProperty('--popup-background', colors.popupBackground);
-  document.documentElement.style.setProperty('--default-button', colors.defaultButton);
-  document.documentElement.style.setProperty('--hover-button', colors.hoverButton);
-  document.documentElement.style.setProperty('--active-button', colors.activeButton);
-  document.documentElement.style.setProperty('--selected-button', colors.selectedButton);
+  Object.entries({
+    'popup-background': colors.popupBackground,
+    'default-button': colors.defaultButton,
+    'hover-button': colors.hoverButton,
+    'active-button': colors.activeButton,
+    'selected-button': colors.selectedButton
+  }).forEach(([name, value]) => {
+    document.documentElement.style.setProperty(`--${name}`, value);
+  });
 
   // Initialize last used emoticons
   Object.keys(categories).forEach(cat => {
@@ -287,22 +291,27 @@ import { checkIsMobile } from "./styles/helpers.js";
     }
   }
 
-  // Define a helper to create the mobile toggle button
-  function createEmoticonsMobileToggleButton() {
-    const mobileToggleBtn = document.createElement("button");
-    mobileToggleBtn.className = "emoticons-mobile-toggle"; // for styling elsewhere
-    mobileToggleBtn.title = "Open emoticons panel";
-    mobileToggleBtn.innerHTML = categoryEmojis[state.activeCategory] || "😊";
-
-    // Toggle popup on tap
-    mobileToggleBtn.addEventListener("click", toggleEmoticonsPopup);
-
-    // Append to body (or your preferred container)
-    document.body.appendChild(mobileToggleBtn);
+  // Function to update the toggle button icon and title
+  function updateToggleButtonIcon() {
+    const toggleBtn = document.querySelector(".emoticons-toggle");
+    if (toggleBtn) {
+      toggleBtn.innerHTML = categoryEmojis[state.activeCategory] || "😊";
+      toggleBtn.title = `Open emoticons panel (${state.activeCategory})`;
+    }
   }
 
-  createEmoticonsMobileToggleButton();
+  // Define a helper to create the toggle button
+  function createToggleButton() {
+    const toggleBtn = document.createElement("button");
+    toggleBtn.className = "emoticons-toggle";
+    toggleBtn.title = `Open emoticons panel (${state.activeCategory})`;
+    toggleBtn.innerHTML = categoryEmojis[state.activeCategory] || "😊";
 
+    toggleBtn.addEventListener("click", toggleEmoticonsPopup);
+    document.body.appendChild(toggleBtn);
+  }
+
+  createToggleButton();
 
   // UI creation
   function createEmoticonsPopup(category) {
@@ -401,6 +410,7 @@ import { checkIsMobile } from "./styles/helpers.js";
         localStorage.setItem("activeCategory", state.activeCategory);
         updateCategoryButtonsState(state.activeCategory);
         updateEmoticonsContainer();
+        updateToggleButtonIcon();
       }
     }
   }
@@ -432,6 +442,7 @@ import { checkIsMobile } from "./styles/helpers.js";
     state.currentSortedEmoticons = getSortedEmoticons(state.activeCategory);
     updateCategoryButtonsState(state.activeCategory);
     updateEmoticonsContainer();
+    updateToggleButtonIcon();
   }
 
   // Emoticon container creation
@@ -592,7 +603,7 @@ import { checkIsMobile } from "./styles/helpers.js";
 
   function switchEmoticonCategory(e) {
     const emoticonPopup = document.querySelector(".emoticons-popup");
-    if (!emoticonPopup || (!["Tab", "KeyH", "KeyL"].includes(e.code) && !(e.code === "Tab" && e.shiftKey))) return;
+    if (!emoticonPopup || (!(["Tab", "KeyH", "KeyL"].includes(e.code)) && !(e.code === "Tab" && e.shiftKey))) return;
 
     e.preventDefault();
     const keys = Object.keys(categories);
@@ -609,6 +620,7 @@ import { checkIsMobile } from "./styles/helpers.js";
     state.currentSortedEmoticons = getSortedEmoticons(next);
     localStorage.setItem("activeCategory", next);
     changeActiveCategoryOnClick(next);
+    updateToggleButtonIcon();
   }
 
   // Set up main event listeners
