@@ -291,10 +291,8 @@ import { checkIsMobile } from "./styles/helpers.js";
     document.body.appendChild(mobileToggleBtn);
   }
 
-  // Inside your main IIFE, after setting up `state` and CSS variables (but before global event listeners):
-  if (state.isMobile) {
-    createEmoticonsMobileToggleButton();
-  }
+  createEmoticonsMobileToggleButton();
+
 
   // UI creation
   function createEmoticonsPopup(category) {
