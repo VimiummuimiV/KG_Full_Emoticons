@@ -190,10 +190,12 @@ $UIGap: 0.5em;
       flex-direction: row;
       flex-wrap: wrap;
       min-height: 320px;
+      height: fit-content;
 
       .emoticon-button {
         min-height: 40px;
         min-width: 40px;
+        height: fit-content;
       }
     }
   }
