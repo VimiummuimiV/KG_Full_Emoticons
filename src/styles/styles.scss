@@ -166,11 +166,6 @@ $UIGap: 0.5em;
       flex-direction: column;
       justify-content: flex-start;
 
-      .close-button,
-      .clear-button {
-        display: none;
-      }
-
       button {
         width: 40px !important;
         height: 40px !important;
