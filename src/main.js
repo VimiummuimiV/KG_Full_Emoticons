@@ -208,9 +208,16 @@ import { checkIsMobile } from "./styles/helpers.js";
     let targetInput = state.lastFocusedInput;
 
     if (!targetInput) {
-      if (context.isForum) targetInput = document.getElementById('fast-reply_textarea');
-      else if (context.isGamelist) targetInput = document.querySelector('#chat-general.chat .messages input.text');
-      else if (context.isGame) targetInput = document.querySelector('[id^="chat-game"].chat .messages input.text');
+      if (context.isForum) {
+        targetInput = document.getElementById('fast-reply_textarea');
+      } else if (context.isGamelist) {
+        targetInput = document.querySelector('#chat-general.chat .messages input.text');
+      } else if (context.isGame) {
+        targetInput = document.querySelector('[id^="chat-game"].chat .messages input.text');
+      } else {
+        // Fallback for other contexts - try any text input
+        targetInput = document.querySelector('#app-chat-container #message-input')
+      }
 
       if (!targetInput) {
         const labels = { isForum: "the forum", isProfile: "the profile", isGamelist: "general chat", isGame: "game chat" };
