@@ -1,5 +1,6 @@
 import "./styles/styles.scss"
 import { categories, categoryEmojis } from "./data/definitions.js";
+import { clearSVG, closeSVG } from "./data/icons.js";
 
 (function () {
   // State management
@@ -22,22 +23,14 @@ import { categories, categoryEmojis } from "./data/definitions.js";
       if (now - (state.lastKeyTimes[targetKey] || 0) < threshold) {
         e.preventDefault();
         callback();
-        state.lastKeyTimes[targetKey] = 0; // Reset after triggering
+        state.lastKeyTimes[targetKey] = 0;
       } else {
         state.lastKeyTimes[targetKey] = now;
       }
     } else {
-      // Reset the timing for the target key using dot notation
-      // state.lastKeyTimes.Semicolon = 0;
       state.lastKeyTimes[targetKey] = 0;
     }
   }
-
-  // Constants
-  const UI = {
-    borderRadius: '0.2em',
-    boxShadow: '0 8px 30px rgba(0, 0, 0, 0.12), 0 4px 6px rgba(0, 0, 0, 0.04), 0 2px 2px rgba(0, 0, 0, 0.08)'
-  };
 
   // Initialize state
   const bodyLightness = getLightness(window.getComputedStyle(document.body).backgroundColor);
@@ -48,6 +41,13 @@ import { categories, categoryEmojis } from "./data/definitions.js";
     activeButton: getAdjustedBackground("activeButton"),
     selectedButton: getAdjustedBackground("selectedButton")
   };
+
+  // Set CSS variables
+  document.documentElement.style.setProperty('--popup-background', colors.popupBackground);
+  document.documentElement.style.setProperty('--default-button', colors.defaultButton);
+  document.documentElement.style.setProperty('--hover-button', colors.hoverButton);
+  document.documentElement.style.setProperty('--active-button', colors.activeButton);
+  document.documentElement.style.setProperty('--selected-button', colors.selectedButton);
 
   // Initialize last used emoticons
   Object.keys(categories).forEach(cat => {
@@ -136,10 +136,8 @@ import { categories, categoryEmojis } from "./data/definitions.js";
     // Close popup if Ctrl+V is detected, assuming paste intention
     if (e.code === 'KeyV' && e.ctrlKey) {
       const popup = document.querySelector(".emoticons-popup");
-      if (popup) {
-        removeEmoticonsPopup();
-      }
-      return; // Allow the paste to proceed normally
+      if (popup) removeEmoticonsPopup();
+      return;
     }
 
     // Use the helper function for detecting a double [targetKey] press
@@ -213,13 +211,8 @@ import { categories, categoryEmojis } from "./data/definitions.js";
       else if (context.isGame) targetInput = document.querySelector('[id^="chat-game"].chat .messages input.text');
 
       if (!targetInput) {
-        const labels = {
-          isForum: "the forum", isProfile: "the profile", isGamelist: "general chat", isGame: "game chat"
-        };
-        const detected = Object.entries(labels)
-          .filter(([key]) => context[key])
-          .map(([_, value]) => value)
-          .join(", ");
+        const labels = { isForum: "the forum", isProfile: "the profile", isGamelist: "general chat", isGame: "game chat" };
+        const detected = Object.entries(labels).filter(([key]) => context[key]).map(([_, value]) => value).join(", ");
         alert(`Please focus on a text field in ${detected}.`);
         return;
       }
@@ -282,76 +275,26 @@ import { categories, categoryEmojis } from "./data/definitions.js";
 
     const popup = document.createElement("div");
     popup.className = "emoticons-popup";
-    popup.style.setProperty('border-radius', '0.4em', 'important');
-    popup.style.setProperty('box-shadow', UI.boxShadow, 'important');
-    Object.assign(popup.style, {
-      opacity: "0",
-      transition: "opacity 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)",
-      position: "fixed",
-      display: "grid",
-      gridTemplateRows: "50px auto",
-      gap: "10px",
-      backgroundColor: colors.popupBackground,
-      padding: "10px",
-      zIndex: "2000",
-      top: "20vh",
-      left: "50vw",
-      transform: "translateX(-50%)",
-      maxWidth: "50vw",
-      minWidth: "300px",
-      width: "50vw",
-      maxHeight: "50vh",
-      overflow: "hidden"
-    });
 
     const headerButtons = document.createElement("div");
-    headerButtons.classList.add("header-buttons");
-    Object.assign(headerButtons.style, {
-      display: "flex",
-      flexDirection: "row",
-      justifyContent: "space-between"
-    });
+    headerButtons.className = "header-buttons";
 
-    // Create buttons
-    const createBtn = (className, title, innerHTML, bgColor, clickHandler) => {
+    const createBtn = (className, title, innerHTML, clickHandler) => {
       const btn = document.createElement("button");
-      btn.classList.add(className);
+      btn.className = className;
       btn.title = title;
       btn.innerHTML = innerHTML;
-      btn.style.setProperty('border-radius', UI.borderRadius, 'important');
-      Object.assign(btn.style, {
-        border: "none",
-        background: bgColor,
-        cursor: "pointer",
-        boxSizing: "border-box",
-        width: "50px",
-        height: "50px",
-        margin: "0 5px",
-        fontSize: "1.4em"
-      });
       if (clickHandler) btn.addEventListener("click", clickHandler);
       return btn;
     };
 
-    const clearButton = createBtn(
-      'clear-button',
-      "Clear usage data",
-      "🗑️",
-      "hsl(40deg 50% 15%)",
-      () => {
-        if (confirm("Clear emoticon usage data?")) {
-          localStorage.removeItem("emoticonUsageData");
-        }
+    const clearButton = createBtn("clear-button", "Clear usage data", clearSVG, () => {
+      if (confirm("Clear emoticon usage data?")) {
+        localStorage.removeItem("emoticonUsageData");
       }
-    );
+    });
 
-    const closeButton = createBtn(
-      'close-button',
-      "Close emoticons panel (or press 'q')",
-      "❌",
-      "hsl(0deg 50% 15%)",
-      removeEmoticonsPopup
-    );
+    const closeButton = createBtn("close-button", "Close emoticons panel", closeSVG, removeEmoticonsPopup);
 
     headerButtons.appendChild(clearButton);
     headerButtons.appendChild(createCategoryContainer());
@@ -385,43 +328,19 @@ import { categories, categoryEmojis } from "./data/definitions.js";
   function createCategoryContainer() {
     const container = document.createElement("div");
     container.className = "category-buttons";
-    Object.assign(container.style, {
-      display: "flex",
-      justifyContent: "center",
-    });
 
     for (let cat in categories) {
       if (Object.prototype.hasOwnProperty.call(categories, cat)) {
         const btn = document.createElement("button");
-        btn.classList.add("category-button");
+        btn.className = "category-button";
         btn.innerHTML = categoryEmojis[cat];
         btn.dataset.category = cat;
         btn.title = cat;
-        btn.style.setProperty("border-radius", UI.borderRadius, "important");
-        Object.assign(btn.style, {
-          background: (cat === state.activeCategory ? colors.activeButton : colors.defaultButton),
-          border: "none",
-          cursor: "pointer",
-          width: "50px",
-          height: "50px",
-          fontSize: "1.4em",
-          margin: "0 5px"
-        });
+        if (cat === state.activeCategory) btn.classList.add("active");
+        if (cat === "Favourites" && categories.Favourites.length === 0) btn.classList.add("disabled");
 
-        // Special handling for "Favourites"
-        if (cat === "Favourites") {
-          if (categories.Favourites.length === 0) {
-            btn.style.opacity = "0.5";
-            btn.style.pointerEvents = "none";
-          }
-          btn.addEventListener("click", handleFavouritesClick);
-        }
-
+        if (cat === "Favourites") btn.addEventListener("click", handleFavouritesClick);
         btn.addEventListener("click", (e) => handleCategoryClick(cat, e));
-        btn.addEventListener("mouseout", () => handleCategoryMouseOut(btn, cat));
-        btn.addEventListener("mouseover", () => {
-          btn.style.background = colors.hoverButton;
-        });
 
         container.appendChild(btn);
       }
@@ -433,13 +352,6 @@ import { categories, categoryEmojis } from "./data/definitions.js";
   function handleCategoryClick(cat, e) {
     if (!e.shiftKey && !e.ctrlKey) {
       changeActiveCategoryOnClick(cat);
-    }
-  }
-
-  function handleCategoryMouseOut(btn, cat) {
-    btn.style.background = (cat === state.activeCategory ? colors.activeButton : colors.defaultButton);
-    if (cat === "Favourites") {
-      btn.style.opacity = categories.Favourites.length ? "" : "0.5";
     }
   }
 
@@ -459,14 +371,16 @@ import { categories, categoryEmojis } from "./data/definitions.js";
 
   function updateCategoryButtonsState(newCategory) {
     document.querySelectorAll(".category-buttons button").forEach((btn) => {
-      btn.style.background = btn.dataset.category === newCategory ? colors.activeButton : colors.defaultButton;
+      if (btn.dataset.category === newCategory) {
+        btn.classList.add("active");
+      } else {
+        btn.classList.remove("active");
+      }
       if (btn.dataset.category === "Favourites") {
         if (categories.Favourites.length === 0) {
-          btn.style.opacity = "0.5";
-          btn.style.pointerEvents = "none";
+          btn.classList.add("disabled");
         } else {
-          btn.style.removeProperty("opacity");
-          btn.style.removeProperty("pointer-events");
+          btn.classList.remove("disabled");
         }
       }
     });
@@ -494,44 +408,22 @@ import { categories, categoryEmojis } from "./data/definitions.js";
     const promises = [];
     state.currentSortedEmoticons.forEach((emoticon) => {
       const btn = document.createElement("button");
-      btn.classList.add('emoticon-button');
+      btn.className = "emoticon-button";
       const imgSrc = `/img/smilies/${emoticon}.gif`;
       btn.innerHTML = `<img src="${imgSrc}" alt="${emoticon}">`;
       btn.title = emoticon;
 
-      btn.style.setProperty('border-radius', UI.borderRadius, 'important');
-      Object.assign(btn.style, {
-        position: 'relative',
-        border: "none",
-        cursor: "pointer",
-        filter: emoticon === state.lastUsedEmoticons[state.activeCategory] ? "sepia(0.7)" : "none",
-        background: emoticon === state.lastUsedEmoticons[state.activeCategory]
-          ? colors.selectedButton
-          : colors.defaultButton
-      });
+      if (emoticon === state.lastUsedEmoticons[state.activeCategory]) {
+        btn.classList.add("selected");
+      } else if (state.activeCategory !== "Favourites" && isEmoticonFavorite(emoticon)) {
+        btn.classList.add("favorite");
+      }
 
-      // Preload the image
       promises.push(new Promise(resolve => {
         const img = new Image();
         img.onload = resolve;
         img.src = imgSrc;
       }));
-
-      // Mouseover: change background to hover color
-      btn.addEventListener("mouseover", () => {
-        btn.style.background = colors.hoverButton;
-      });
-
-      // Mouseout: reset background based on state
-      btn.addEventListener("mouseout", () => {
-        if (emoticon === state.lastUsedEmoticons[state.activeCategory]) {
-          btn.style.background = colors.selectedButton;
-        } else if (state.activeCategory !== "Favourites" && isEmoticonFavorite(emoticon)) {
-          btn.style.background = colors.activeButton;
-        } else {
-          btn.style.background = colors.defaultButton;
-        }
-      });
 
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -566,12 +458,6 @@ import { categories, categoryEmojis } from "./data/definitions.js";
     await Promise.all(promises);
     const { maxImageWidth, maxImageHeight } = await calculateMaxImageDimensions(state.currentSortedEmoticons);
     Object.assign(container.style, {
-      display: "grid",
-      gap: "10px",
-      scrollbarWidth: "none",
-      overflowY: "auto",
-      overflowX: "hidden",
-      maxHeight: "calc(-80px + 50vh)",
       gridTemplateColumns: `repeat(auto-fit, minmax(${maxImageWidth}px, 1fr))`,
       gridAutoRows: `minmax(${maxImageHeight}px, auto)`
     });
@@ -619,17 +505,11 @@ import { categories, categoryEmojis } from "./data/definitions.js";
       const buttons = document.querySelectorAll(".emoticon-buttons button");
       buttons.forEach((btn) => {
         const emoticon = btn.title;
-        const isSelected = emoticon === state.lastUsedEmoticons[state.activeCategory];
-        if (isSelected) {
-          btn.style.background = colors.selectedButton;
-          btn.style.filter = "sepia(0.7)";
-        } else {
-          btn.style.filter = "none";
-          if (state.activeCategory !== "Favourites" && isEmoticonFavorite(emoticon)) {
-            btn.style.background = colors.activeButton;
-          } else {
-            btn.style.background = colors.defaultButton;
-          }
+        btn.classList.remove("selected", "favorite");
+        if (emoticon === state.lastUsedEmoticons[state.activeCategory]) {
+          btn.classList.add("selected");
+        } else if (state.activeCategory !== "Favourites" && isEmoticonFavorite(emoticon)) {
+          btn.classList.add("favorite");
         }
       });
     });
@@ -667,12 +547,10 @@ import { categories, categoryEmojis } from "./data/definitions.js";
         incrementEmoticonUsage(emoticon);
         if (!e.shiftKey) removeEmoticonsPopup();
       }
-    }
-    else if (e.code === "ArrowLeft" || e.code === "KeyJ") {
-      updateActiveEmoticon(-1); // Move left
-    }
-    else if (e.code === "ArrowRight" || e.code === "KeyK") {
-      updateActiveEmoticon(1); // Move right
+    } else if (e.code === "ArrowLeft" || e.code === "KeyJ") {
+      updateActiveEmoticon(-1);
+    } else if (e.code === "ArrowRight" || e.code === "KeyK") {
+      updateActiveEmoticon(1);
     }
   }
 

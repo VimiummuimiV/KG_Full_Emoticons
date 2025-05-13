@@ -1,0 +1,121 @@
+@mixin button-styles {
+  border-radius: 0.2em !important;
+  border: none;
+  cursor: pointer;
+  box-sizing: border-box;
+  width: 50px;
+  height: 50px;
+  font-size: 1.4em;
+}
+
+.emoticons-popup {
+  border-radius: 0.4em !important;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12), 0 4px 6px rgba(0, 0, 0, 0.04),
+    0 2px 2px rgba(0, 0, 0, 0.08) !important;
+  opacity: 0;
+  transition: opacity 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  position: fixed;
+  display: grid;
+  grid-template-rows: 50px auto;
+  padding: 0.5em;
+  gap: 0.5em;
+  background-color: var(--popup-background);
+  z-index: 2000;
+  top: 20vh;
+  left: 50vw;
+  transform: translateX(-50%);
+  max-width: 50vw;
+  min-width: 300px;
+  width: 50vw;
+  max-height: 50vh;
+  overflow: hidden;
+
+  .header-buttons {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+
+    .clear-button {
+      @include button-styles;
+      background: hsl(40deg 50% 15%);
+
+      svg {
+        stroke: hsl(40deg 50% 60%);
+      }
+    }
+
+    .category-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 0.5em;
+
+      .category-button {
+        @include button-styles;
+        background: var(--default-button);
+
+        &.active {
+          background: var(--active-button);
+        }
+
+        &:hover {
+          background: var(--hover-button);
+        }
+
+        &.disabled {
+          opacity: 0.5;
+          pointer-events: none;
+        }
+      }
+    }
+
+    .close-button {
+      @include button-styles;
+      background: hsl(0deg 50% 15%);
+
+      svg {
+        stroke: hsl(0deg 50% 60%);
+      }
+    }
+  }
+
+  .emoticon-buttons {
+    display: grid;
+    gap: 0.5em;
+    overflow-y: auto;
+    overflow-x: hidden;
+    max-height: calc(-80px + 50vh);
+    scrollbar-width: none;
+    &::-webkit-scrollbar {
+      display: none;
+    }
+
+    .emoticon-button {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      border-radius: 0.2em !important;
+      border: none;
+      cursor: pointer;
+      position: relative;
+      background: var(--default-button);
+      padding: 0;
+
+      img {
+        display: block;
+      }
+
+      &.selected {
+        background: var(--selected-button);
+        filter: sepia(0.7);
+      }
+
+      &.favorite {
+        background: var(--active-button);
+      }
+
+      &:hover {
+        background: var(--hover-button);
+      }
+    }
+  }
+}
