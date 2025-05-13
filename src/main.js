@@ -80,7 +80,7 @@ import { checkIsMobile } from "./styles/helpers.js";
       defaultButton: 15,
       hoverButton: 25,
       activeButton: 35,
-      selectedButton: 50 
+      selectedButton: 50
     };
     const adjustment = adjustments[type] || 0;
     const adjustedLightness = bodyLightness < 50 ? bodyLightness + adjustment : bodyLightness - adjustment;
@@ -459,12 +459,15 @@ import { checkIsMobile } from "./styles/helpers.js";
   async function createEmoticonsContainer(category) {
     const container = document.createElement("div");
     container.className = "emoticon-buttons";
+
+    container.addEventListener("contextmenu", e => e.preventDefault());
+
     state.currentSortedEmoticons = getSortedEmoticons(category);
 
     // For long press functionality
     let longPressTimer;
     let longPressTarget = null;
-    const longPressDelay = 500;
+    const longPressDelay = 300;
 
     // Preload images and populate DOM
     const loadPromises = state.currentSortedEmoticons.map(emoticon => {
