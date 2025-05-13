@@ -252,5 +252,5 @@ export const categories = {
 }
 
 export const categoryEmojis = {
-  Boys: "😃", Girls: "👩‍🦰", Christmas: "🎄", Inlove: "❤️", Army: "🔫", Halloween: "🎃", Favourites: "🌟"
+  Boys: "🎩", Girls: "🎀‍", Christmas: "🎄", Inlove: "❤️", Army: "🔫", Halloween: "🎃", Favourites: "🌟"
 };

@@ -188,6 +188,11 @@ import { checkIsMobile } from "./styles/helpers.js";
     const popup = document.querySelector(".emoticons-popup");
     if (popup && !popup.contains(e.target)) {
       removeEmoticonsPopup();
+      const input = state.lastFocusedInput;
+      if (input) {
+        input.focus();
+        input.setSelectionRange(input.value.length, input.value.length);
+      }
     }
   }
 
@@ -225,7 +230,7 @@ import { checkIsMobile } from "./styles/helpers.js";
         alert(`Please focus on a text field in ${detected}.`);
         return;
       }
-      targetInput.focus();
+      if (!state.isMobile) targetInput.focus();
       state.lastFocusedInput = targetInput;
     }
 
@@ -233,7 +238,7 @@ import { checkIsMobile } from "./styles/helpers.js";
     const pos = targetInput.selectionStart || 0;
     targetInput.value = targetInput.value.slice(0, pos) + code + targetInput.value.slice(pos);
     targetInput.setSelectionRange(pos + code.length, pos + code.length);
-    targetInput.focus();
+    if (!state.isMobile) targetInput.focus();
   }
 
   // Event listeners cleanup
