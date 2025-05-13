@@ -188,11 +188,6 @@ import { checkIsMobile } from "./styles/helpers.js";
     const popup = document.querySelector(".emoticons-popup");
     if (popup && !popup.contains(e.target)) {
       removeEmoticonsPopup();
-      const input = state.lastFocusedInput;
-      if (input) {
-        input.focus();
-        input.setSelectionRange(input.value.length, input.value.length);
-      }
     }
   }
 
@@ -265,10 +260,20 @@ import { checkIsMobile } from "./styles/helpers.js";
   // Popup control
   function removeEmoticonsPopup() {
     const popup = document.querySelector(".emoticons-popup");
-    if (popup) {
-      removeEventListeners();
-      toggleContainerSmoothly(popup, "hide");
-      state.isPopupCreated = false;
+    if (!popup) return;
+
+    // teardown
+    removeEventListeners();
+    toggleContainerSmoothly(popup, "hide");
+    state.isPopupCreated = false;
+
+    // restore focus
+    const input = state.lastFocusedInput;
+    if (input) {
+      input.focus();
+      // place cursor at end
+      const pos = input.value.length;
+      input.setSelectionRange(pos, pos);
     }
   }
 
