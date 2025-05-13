@@ -144,7 +144,7 @@ $UIGap: 0.5em;
 @media screen and (max-width: 1200px) {
   .emoticons-popup {
     width: 100%;
-    max-height: 520px;
+    max-height: 380px;
     top: 0;
   }
 }
@@ -160,16 +160,16 @@ $UIGap: 0.5em;
       justify-content: flex-start;
 
       .close-button {
-        order: 1;
+        display: none;
       }
 
       .clear-button {
-        order: 2;
+        order: 1;
       }
 
       button {
-        width: 38px !important;
-        height: 38px !important;
+        width: 40px !important;
+        height: 40px !important;
 
         svg {
           width: 18px !important;
@@ -179,7 +179,7 @@ $UIGap: 0.5em;
 
       .category-buttons {
         flex-direction: column;
-        order: 3;
+        order: 2;
 
         .category-button {
           font-size: 1.2em;
