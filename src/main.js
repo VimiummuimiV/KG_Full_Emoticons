@@ -351,8 +351,6 @@ import { checkIsMobile } from "./styles/helpers.js";
       requestAnimationFrame(updateEmoticonHighlight);
     });
 
-    popup.addEventListener("dblclick", removeEmoticonsPopup);
-
     const eventListenersArray = [
       { event: "keydown", handler: navigateEmoticons },
       { event: "keydown", handler: switchEmoticonCategory },
@@ -457,8 +455,12 @@ import { checkIsMobile } from "./styles/helpers.js";
   async function createEmoticonsContainer(category) {
     const container = document.createElement("div");
     container.className = "emoticon-buttons";
-
     state.currentSortedEmoticons = getSortedEmoticons(category);
+
+    // For long press functionality
+    let longPressTimer;
+    let longPressTarget = null;
+    const longPressDelay = 500;
 
     // Preload images and populate DOM
     const loadPromises = state.currentSortedEmoticons.map(emoticon => {
@@ -485,32 +487,64 @@ import { checkIsMobile } from "./styles/helpers.js";
       });
     });
 
+    // Helper function to toggle favorite status
+    const toggleFavorite = (emoticon) => {
+      const fav = JSON.parse(localStorage.getItem("favoriteEmoticons")) || [];
+      const idx = fav.indexOf(emoticon);
+      if (category === "Favourites" && idx !== -1) {
+        fav.splice(idx, 1);
+        categories.Favourites.splice(idx, 1);
+      } else if (category !== "Favourites" && idx === -1) {
+        fav.push(emoticon);
+        categories.Favourites.push(emoticon);
+      }
+      localStorage.setItem("favoriteEmoticons", JSON.stringify(fav));
+      updateCategoryButtonsState(category);
+      if (category === "Favourites") updateEmoticonsContainer();
+      updateEmoticonHighlight();
+    };
+
+    // Pointer event handlers for long press (works for both mouse and touch)
+    container.addEventListener("pointerdown", e => {
+      const btn = e.target.closest("button.emoticon-button");
+      if (!btn) return;
+
+      longPressTarget = btn;
+      longPressTimer = setTimeout(() => {
+        if (longPressTarget) {
+          e.preventDefault();
+          const emoticon = longPressTarget.title;
+          toggleFavorite(emoticon);
+          longPressTarget = null; // Prevent normal click after long press
+        }
+      }, longPressDelay);
+    });
+
+    // Clear timer if pointer moves away or is released before timeout
+    const clearLongPressTimer = () => {
+      if (longPressTimer) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+      }
+    };
+
+    container.addEventListener("pointerup", clearLongPressTimer);
+    container.addEventListener("pointerleave", clearLongPressTimer);
+    container.addEventListener("pointercancel", clearLongPressTimer);
+
     // Delegate all click handling to the container
     container.addEventListener("click", e => {
       const btn = e.target.closest("button.emoticon-button");
-      if (!btn) return;
-      e.stopPropagation();
+      if (!btn || !longPressTarget) return; // Skip if this was a long press that already triggered
 
+      e.stopPropagation();
       const emoticon = btn.title;
 
       if (e.shiftKey) {
         insertEmoticonCode(emoticon);
-
       } else if (e.ctrlKey) {
-        // toggle favorite
-        const fav = JSON.parse(localStorage.getItem("favoriteEmoticons")) || [];
-        const idx = fav.indexOf(emoticon);
-        if (category === "Favourites" && idx !== -1) {
-          fav.splice(idx, 1);
-          categories.Favourites.splice(idx, 1);
-        } else if (category !== "Favourites" && idx === -1) {
-          fav.push(emoticon);
-          categories.Favourites.push(emoticon);
-        }
-        localStorage.setItem("favoriteEmoticons", JSON.stringify(fav));
-        updateCategoryButtonsState(category);
-        if (category === "Favourites") updateEmoticonsContainer();
-
+        // toggle favorite with ctrl+click
+        toggleFavorite(emoticon);
       } else {
         insertEmoticonCode(emoticon);
         incrementEmoticonUsage(emoticon);
