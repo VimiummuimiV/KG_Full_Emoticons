@@ -1,4 +1,4 @@
-import "./styles/styles.scss"
+import "./styles/styles.scss";
 import { categories, categoryEmojis } from "./data/definitions.js";
 import { clearSVG, closeSVG } from "./data/icons.js";
 import { checkIsMobile } from "./styles/helpers.js";
@@ -224,7 +224,7 @@ import { checkIsMobile } from "./styles/helpers.js";
         targetInput = document.querySelector('[id^="chat-game"].chat .messages input.text');
       } else {
         // Fallback for other contexts - try any text input
-        targetInput = document.querySelector('#app-chat-container #message-input')
+        targetInput = document.querySelector('#app-chat-container #message-input');
       }
 
       if (!targetInput) {
