@@ -16,10 +16,15 @@
     var(--third-accent-color) 25%,
     transparent 85%
   );
-  --label-mix: color-mix(
+  --label-unfocused-mix: color-mix(
     in srgb,
     var(--background-color) 85%,
     var(--third-accent-color) 15%
+  );
+  --label-focused-mix: color-mix(
+    in srgb,
+    var(--background-color) 85%,
+    var(--fourth-accent-color) 15%
   );
 }
 
@@ -123,14 +128,32 @@ $UIGap: 0.5em;
     color: var(--third-accent-color, var(--selected-button));
     padding: 0.2em 0.6em;
     border-radius: 0.2em !important;
-    background-color: var(--label-mix, var(--default-button));
+    border: 1px solid transparent;
+    background-color: var(--label-unfocused-mix, var(--default-button));
     display: inline-flex;
     margin: 1em 0 0.5em 0;
   }
 
-  .category-emoticon-buttons,
+  .label.focused-section {
+    color: var(--fourth-accent-color, var(--default-button));
+    background-color: var(--label-focused-mix, var(--selected-button));
+  }
+
   .recent-emoticon-buttons {
+    display: flex;
+    flex-wrap: wrap;
+
+    .emoticon-button {
+      height: fit-content;
+    }
+  }
+
+  .category-emoticon-buttons {
     display: grid;
+  }
+
+  .recent-emoticon-buttons,
+  .category-emoticon-buttons {
     gap: $UIGap;
     overflow-y: auto;
     overflow-x: hidden;
@@ -199,8 +222,8 @@ $UIGap: 0.5em;
     top: 30px;
     max-height: 70vh;
 
-    .category-emoticon-buttons,
-    .recent-emoticon-buttons {
+    .recent-emoticon-buttons,
+    .category-emoticon-buttons {
       max-height: calc(70vh - 70px);
     }
   }
@@ -235,8 +258,8 @@ $UIGap: 0.5em;
       }
     }
 
-    .category-emoticon-buttons,
-    .recent-emoticon-buttons {
+    .recent-emoticon-buttons,
+    .category-emoticon-buttons {
       display: flex;
       flex-direction: row;
       flex-wrap: wrap;

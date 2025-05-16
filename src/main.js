@@ -22,7 +22,9 @@ import { checkIsMobile } from "./styles/helpers.js";
     lastKeyTimes: {},
     lastUsedEmoticons: JSON.parse(localStorage.getItem("lastUsedEmoticons")) || {},
     recentEmoticons: JSON.parse(localStorage.getItem("recentEmoticons")) || [],
-    isMobile: checkIsMobile()
+    isMobile: checkIsMobile(),
+    focusedSection: "recent", // Can be "category" or "recent"
+    selectedRecentIndex: -1
   };
 
   // Helper function to handle double key presses
@@ -762,56 +764,144 @@ import { checkIsMobile } from "./styles/helpers.js";
   // Navigation and selection
   function updateEmoticonHighlight() {
     requestAnimationFrame(() => {
-      const buttons = document.querySelectorAll(".category-emoticon-buttons button");
-      buttons.forEach((btn) => {
-        const emoticon = btn.title;
-        btn.classList.remove("selected", "favorite");
-        if (emoticon === state.lastUsedEmoticons[state.activeCategory]) {
-          btn.classList.add("selected");
-        } else if (state.activeCategory !== "Favourites" && isEmoticonFavorite(emoticon)) {
-          btn.classList.add("favorite");
-        }
+      // First, remove highlighting from all buttons
+      document.querySelectorAll(".emoticon-button").forEach(btn => {
+        btn.classList.remove("selected", "favorite", "section-focused");
       });
+
+      // Remove section focus highlight
+      document.querySelectorAll(".category-label, .recent-label")
+        .forEach(label => label.classList.remove("focused-section"));
+
+      // Highlight the focused section
+      const labelSelector = state.focusedSection === "category"
+        ? ".category-label"
+        : ".recent-label";
+      const focusedLabel = document.querySelector(labelSelector);
+      if (focusedLabel) {
+        focusedLabel.classList.add("focused-section");
+      }
+
+      // Highlight category buttons
+      if (state.activeCategory) {
+        const categoryButtons = document.querySelectorAll(".category-emoticon-buttons button");
+        categoryButtons.forEach((btn) => {
+          const emoticon = btn.title;
+          if (emoticon === state.lastUsedEmoticons[state.activeCategory]) {
+            btn.classList.add("selected");
+            if (state.focusedSection === "category") {
+              btn.classList.add("section-focused");
+            }
+          } else if (state.activeCategory !== "Favourites" && isEmoticonFavorite(emoticon)) {
+            btn.classList.add("favorite");
+          }
+        });
+      }
+
+      // Highlight recent buttons
+      if (state.recentEmoticons.length > 0) {
+        const recentButtons = document.querySelectorAll(".recent-emoticon-buttons button");
+        recentButtons.forEach((btn, index) => {
+          if (index === state.selectedRecentIndex) {
+            btn.classList.add("selected");
+            if (state.focusedSection === "recent") {
+              btn.classList.add("section-focused");
+            }
+          }
+        });
+      }
     });
-  }
-
-  function updateActiveEmoticon(direction) {
-    const currentIndex = state.currentSortedEmoticons.indexOf(state.lastUsedEmoticons[state.activeCategory]);
-    let newIndex = currentIndex === -1 ? 0 : currentIndex + direction;
-
-    // Handle wrapping
-    if (newIndex < 0) newIndex = state.currentSortedEmoticons.length - 1;
-    if (newIndex >= state.currentSortedEmoticons.length) newIndex = 0;
-
-    // Update state
-    state.lastUsedEmoticons[state.activeCategory] = state.currentSortedEmoticons[newIndex];
-    localStorage.setItem("lastUsedEmoticons", JSON.stringify(state.lastUsedEmoticons));
-
-    // Update UI
-    updateEmoticonHighlight();
   }
 
   function navigateEmoticons(e) {
     const popup = document.querySelector(".emoticons-popup");
-    if (!popup || !state.currentSortedEmoticons || state.currentSortedEmoticons.length === 0) return;
+    if (!popup) return;
 
-    const handledKeys = new Set(['Enter', 'Semicolon', 'ArrowLeft', 'KeyJ', 'ArrowRight', 'KeyK']);
+    // Check if the focused section exists
+    const focusedSectionSelector = state.focusedSection === "category"
+      ? ".category-emoticon-buttons"
+      : ".recent-emoticon-buttons";
+
+    const focusedSection = document.querySelector(focusedSectionSelector);
+    if (!focusedSection) {
+      // If focused section doesn't exist, default to category
+      state.focusedSection = "category";
+    }
+
+    const handledKeys = new Set(['Enter', 'Semicolon', 'ArrowLeft', 'KeyJ', 'ArrowRight', 'KeyK', 'KeyS']);
     if (!handledKeys.has(e.code)) return;
 
     e.preventDefault();
 
+    // Handle S key to switch focus between sections
+    if (e.code === "KeyS") {
+      // Toggle between recent and category if recents exist
+      const hasRecents = document.querySelector(".recent-emoticon-buttons") !== null;
+      if (state.focusedSection === "category" && hasRecents) {
+        state.focusedSection = "recent";
+        // Initialize selection in recents if none exists
+        if (state.selectedRecentIndex === -1 && state.recentEmoticons.length > 0) {
+          state.selectedRecentIndex = 0;
+        }
+      } else {
+        state.focusedSection = "category";
+      }
+      updateEmoticonHighlight();
+      return;
+    }
+
+    // Handle enter or semicolon (select emoticon)
     if (e.code === "Enter" || e.code === "Semicolon") {
-      const emoticon = state.lastUsedEmoticons[state.activeCategory];
-      if (emoticon && state.currentSortedEmoticons.includes(emoticon)) {
+      let emoticon;
+
+      if (state.focusedSection === "category") {
+        emoticon = state.lastUsedEmoticons[state.activeCategory];
+      } else if (state.selectedRecentIndex !== -1 && state.selectedRecentIndex < state.recentEmoticons.length) {
+        emoticon = state.recentEmoticons[state.selectedRecentIndex];
+      }
+
+      if (emoticon) {
         insertEmoticonCode(emoticon);
         incrementEmoticonUsage(emoticon);
         if (!e.shiftKey) removeEmoticonsPopup();
       }
     } else if (e.code === "ArrowLeft" || e.code === "KeyJ") {
-      updateActiveEmoticon(-1);
+      // Navigate left
+      navigateSelection(-1);
     } else if (e.code === "ArrowRight" || e.code === "KeyK") {
-      updateActiveEmoticon(1);
+      // Navigate right
+      navigateSelection(1);
     }
+  }
+
+  function navigateSelection(direction) {
+    if (state.focusedSection === "category") {
+      // Category navigation
+      const currentIndex = state.currentSortedEmoticons.indexOf(state.lastUsedEmoticons[state.activeCategory]);
+      let newIndex = currentIndex === -1 ? 0 : currentIndex + direction;
+
+      // Handle wrapping
+      if (newIndex < 0) newIndex = state.currentSortedEmoticons.length - 1;
+      if (newIndex >= state.currentSortedEmoticons.length) newIndex = 0;
+
+      // Update state
+      state.lastUsedEmoticons[state.activeCategory] = state.currentSortedEmoticons[newIndex];
+      localStorage.setItem("lastUsedEmoticons", JSON.stringify(state.lastUsedEmoticons));
+    } else {
+      // Recent emoticons navigation
+      if (state.recentEmoticons.length === 0) return;
+
+      // Calculate new index with wrapping
+      let newIndex = state.selectedRecentIndex === -1 ? 0 : state.selectedRecentIndex + direction;
+      if (newIndex < 0) newIndex = state.recentEmoticons.length - 1;
+      if (newIndex >= state.recentEmoticons.length) newIndex = 0;
+
+      // Update state
+      state.selectedRecentIndex = newIndex;
+    }
+
+    // Update the UI
+    updateEmoticonHighlight();
   }
 
   function switchEmoticonCategory(e) {
