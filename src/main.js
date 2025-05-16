@@ -7,7 +7,7 @@ import {
 } from "./data/definitions.js";
 
 import { clearSVG, closeSVG } from "./data/icons.js";
-import { checkIsMobile } from "./styles/helpers.js";
+import { checkIsMobile } from "./helpers.js";
 
 import {
   setupDocumentEventListeners,
