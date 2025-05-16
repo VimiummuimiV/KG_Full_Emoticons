@@ -28,11 +28,11 @@ import {
     lastFocusedInput: null,
     latestCategoryRequest: null,
     lastKeyTimes: {},
-    lastUsedEmoticons: JSON.parse(localStorage.getItem("lastUsedEmoticons")) || {},
+    lastUsedCategoryEmoticons: JSON.parse(localStorage.getItem("lastUsedCategoryEmoticons")) || {},
     recentEmoticons: JSON.parse(localStorage.getItem("recentEmoticons")) || [],
-    isMobile: checkIsMobile(),
+    lastUsedRecentEmoticon: JSON.parse(localStorage.getItem("lastUsedRecentEmoticon")) || 0,
     focusedSection: "recent", // Can be "category" or "recent"
-    selectedRecentIndex: -1
+    isMobile: checkIsMobile()
   };
 
   // Initialize state
@@ -58,8 +58,8 @@ import {
 
   // Initialize last used emoticons
   Object.keys(categories).forEach(cat => {
-    if (!Object.prototype.hasOwnProperty.call(state.lastUsedEmoticons, cat) || !categories[cat].includes(state.lastUsedEmoticons[cat])) {
-      state.lastUsedEmoticons[cat] = categories[cat][0] || '';
+    if (!Object.prototype.hasOwnProperty.call(state.lastUsedCategoryEmoticons, cat) || !categories[cat].includes(state.lastUsedCategoryEmoticons[cat])) {
+      state.lastUsedCategoryEmoticons[cat] = categories[cat][0] || '';
     }
   });
 
@@ -110,11 +110,16 @@ import {
 
   // Function to add emoticon to recent list
   function addToRecentEmoticons(emoticon) {
+    // Remove from the current position (if exists)
+    const filteredRecents = state.recentEmoticons.filter(e => e !== emoticon);
+    
+    // Add to beginning
     state.recentEmoticons = [
       emoticon,
-      ...state.recentEmoticons.filter(e => e !== emoticon)
+      ...filteredRecents
     ].slice(0, settings.maxRecentEmoticons);
 
+    localStorage.setItem("lastUsedRecentEmoticon", JSON.stringify(state.lastUsedRecentEmoticon));
     localStorage.setItem("recentEmoticons", JSON.stringify(state.recentEmoticons));
   }
 
@@ -296,6 +301,8 @@ import {
         localStorage.removeItem("recentEmoticons");
         state.recentEmoticons = [];
 
+        localStorage.setItem("lastUsedRecentEmoticon", JSON.stringify(state.lastUsedRecentEmoticon));
+
         // remove recent-emoticons container from the popup
         const recentContainer = document.querySelector(".recent-emoticons");
         if (recentContainer) recentContainer.remove();
@@ -384,6 +391,13 @@ import {
       if (index !== -1) {
         state.recentEmoticons.splice(index, 1);
         localStorage.setItem("recentEmoticons", JSON.stringify(state.recentEmoticons));
+        
+        // Reset lastUsedRecentEmoticon if it's out of bounds
+        if (state.lastUsedRecentEmoticon >= state.recentEmoticons.length) {
+          state.lastUsedRecentEmoticon = Math.max(0, state.recentEmoticons.length - 1);
+          localStorage.setItem("lastUsedRecentEmoticon", JSON.stringify(state.lastUsedRecentEmoticon));
+        }
+        
         // Remove only the specific emoticon button
         target.remove();
         // If no more recent emoticons, remove the entire recent section (including its label)
@@ -399,10 +413,18 @@ import {
         onLongPress(emoticon, target);
         return;
       }
+      
+      // Update last used recent emoticon index
+      const index = state.recentEmoticons.indexOf(emoticon);
+      if (index !== -1) {
+        state.lastUsedRecentEmoticon = index;
+        localStorage.setItem("lastUsedRecentEmoticon", JSON.stringify(state.lastUsedRecentEmoticon));
+      }
+      
       insertEmoticonCode(emoticon);
       incrementEmoticonUsage(emoticon);
-      state.lastUsedEmoticons[state.activeCategory] = emoticon;
-      localStorage.setItem("lastUsedEmoticons", JSON.stringify(state.lastUsedEmoticons));
+      state.lastUsedCategoryEmoticons[state.activeCategory] = emoticon;
+      localStorage.setItem("lastUsedCategoryEmoticons", JSON.stringify(state.lastUsedCategoryEmoticons));
       if (!state.isMobile && !event.shiftKey) removeEmoticonsPopup();
       updateEmoticonHighlight();
     };
@@ -432,7 +454,7 @@ import {
     state.currentSortedEmoticons = getSortedEmoticons(category);
     const loadPromises = state.currentSortedEmoticons.map(emoticon => {
       let additionalClass = "";
-      if (emoticon === state.lastUsedEmoticons[state.activeCategory]) {
+      if (emoticon === state.lastUsedCategoryEmoticons[state.activeCategory]) {
         additionalClass = "selected";
       } else if (state.activeCategory !== "Favourites" && isEmoticonFavorite(emoticon)) {
         additionalClass = "favorite";
@@ -468,8 +490,8 @@ import {
       } else {
         insertEmoticonCode(emoticon);
         incrementEmoticonUsage(emoticon);
-        state.lastUsedEmoticons[state.activeCategory] = emoticon;
-        localStorage.setItem("lastUsedEmoticons", JSON.stringify(state.lastUsedEmoticons));
+        state.lastUsedCategoryEmoticons[state.activeCategory] = emoticon;
+        localStorage.setItem("lastUsedCategoryEmoticons", JSON.stringify(state.lastUsedCategoryEmoticons));
         if (!state.isMobile) removeEmoticonsPopup();
       }
       updateEmoticonHighlight();
@@ -585,7 +607,7 @@ import {
         const categoryButtons = document.querySelectorAll(".category-emoticon-buttons button");
         categoryButtons.forEach((btn) => {
           const emoticon = btn.title;
-          if (emoticon === state.lastUsedEmoticons[state.activeCategory]) {
+          if (emoticon === state.lastUsedCategoryEmoticons[state.activeCategory]) {
             btn.classList.add("selected");
             if (state.focusedSection === "category") {
               btn.classList.add("section-focused");
@@ -599,14 +621,15 @@ import {
       // Highlight recent buttons
       if (state.recentEmoticons.length > 0) {
         const recentButtons = document.querySelectorAll(".recent-emoticon-buttons button");
-        recentButtons.forEach((btn, index) => {
-          if (index === state.selectedRecentIndex) {
-            btn.classList.add("selected");
-            if (state.focusedSection === "recent") {
-              btn.classList.add("section-focused");
-            }
+        const safeIndex = Math.min(state.lastUsedRecentEmoticon, recentButtons.length - 1);
+        
+        if (safeIndex >= 0 && safeIndex < recentButtons.length) {
+          const selectedBtn = recentButtons[safeIndex];
+          selectedBtn.classList.add("selected");
+          if (state.focusedSection === "recent") {
+            selectedBtn.classList.add("section-focused");
           }
-        });
+        }
       }
     });
   }
@@ -614,7 +637,7 @@ import {
   function navigateSelection(direction) {
     if (state.focusedSection === "category") {
       // Category navigation
-      const currentIndex = state.currentSortedEmoticons.indexOf(state.lastUsedEmoticons[state.activeCategory]);
+      const currentIndex = state.currentSortedEmoticons.indexOf(state.lastUsedCategoryEmoticons[state.activeCategory]);
       let newIndex = currentIndex === -1 ? 0 : currentIndex + direction;
 
       // Handle wrapping
@@ -622,19 +645,20 @@ import {
       if (newIndex >= state.currentSortedEmoticons.length) newIndex = 0;
 
       // Update state
-      state.lastUsedEmoticons[state.activeCategory] = state.currentSortedEmoticons[newIndex];
-      localStorage.setItem("lastUsedEmoticons", JSON.stringify(state.lastUsedEmoticons));
+      state.lastUsedCategoryEmoticons[state.activeCategory] = state.currentSortedEmoticons[newIndex];
+      localStorage.setItem("lastUsedCategoryEmoticons", JSON.stringify(state.lastUsedCategoryEmoticons));
     } else {
       // Recent emoticons navigation
       if (state.recentEmoticons.length === 0) return;
 
       // Calculate new index with wrapping
-      let newIndex = state.selectedRecentIndex === -1 ? 0 : state.selectedRecentIndex + direction;
+      let newIndex = state.lastUsedRecentEmoticon + direction;
       if (newIndex < 0) newIndex = state.recentEmoticons.length - 1;
       if (newIndex >= state.recentEmoticons.length) newIndex = 0;
 
       // Update state
-      state.selectedRecentIndex = newIndex;
+      state.lastUsedRecentEmoticon = newIndex;
+      localStorage.setItem("lastUsedRecentEmoticon", JSON.stringify(state.lastUsedRecentEmoticon));
     }
 
     // Update the UI

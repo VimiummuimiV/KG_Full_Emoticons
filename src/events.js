@@ -63,20 +63,20 @@ export function navigateEmoticons(e, appContext) {
   const { state, insertEmoticonCode, incrementEmoticonUsage, removeEmoticonsPopup, updateEmoticonHighlight, navigateSelection } = appContext;
   const popup = document.querySelector(".emoticons-popup");
   if (!popup) return;
-  const focusedSectionSelector = state.focusedSection === "category" ? ".category-emoticon-buttons" : ".recent-emoticon-buttons";
-  const focusedSection = document.querySelector(focusedSectionSelector);
-  if (!focusedSection) {
-    state.focusedSection = "category";
-  }
+
   const handledKeys = new Set(['Enter', 'Semicolon', 'ArrowLeft', 'KeyJ', 'ArrowRight', 'KeyK', 'KeyS']);
   if (!handledKeys.has(e.code)) return;
   e.preventDefault();
+
+  // Section switch (S key)
   if (e.code === "KeyS") {
     const hasRecents = document.querySelector(".recent-emoticon-buttons") !== null;
     if (state.focusedSection === "category" && hasRecents) {
       state.focusedSection = "recent";
-      if (state.selectedRecentIndex === -1 && state.recentEmoticons.length > 0) {
-        state.selectedRecentIndex = 0;
+      // ensure lastUsedRecentEmoticon is within bounds
+      if (state.lastUsedRecentEmoticon < 0 || state.lastUsedRecentEmoticon >= state.recentEmoticons.length) {
+        state.lastUsedRecentEmoticon = 0;
+        localStorage.setItem("lastUsedRecentEmoticon", JSON.stringify(0));
       }
     } else {
       state.focusedSection = "category";
@@ -84,19 +84,25 @@ export function navigateEmoticons(e, appContext) {
     updateEmoticonHighlight();
     return;
   }
+
+  // Selection and insertion
   if (e.code === "Enter" || e.code === "Semicolon") {
     let emoticon;
     if (state.focusedSection === "category") {
-      emoticon = state.lastUsedEmoticons[state.activeCategory];
-    } else if (state.selectedRecentIndex !== -1 && state.selectedRecentIndex < state.recentEmoticons.length) {
-      emoticon = state.recentEmoticons[state.selectedRecentIndex];
+      emoticon = state.lastUsedCategoryEmoticons[state.activeCategory];
+    } else if (state.focusedSection === "recent" && state.lastUsedRecentEmoticon < state.recentEmoticons.length) {
+      emoticon = state.recentEmoticons[state.lastUsedRecentEmoticon];
     }
     if (emoticon) {
       insertEmoticonCode(emoticon);
       incrementEmoticonUsage(emoticon);
       if (!e.shiftKey) removeEmoticonsPopup();
     }
-  } else if (e.code === "ArrowLeft" || e.code === "KeyJ") {
+    return;
+  }
+
+  // Arrow / J K navigation within section
+  if (e.code === "ArrowLeft" || e.code === "KeyJ") {
     navigateSelection(-1);
   } else if (e.code === "ArrowRight" || e.code === "KeyK") {
     navigateSelection(1);
@@ -108,14 +114,17 @@ export function switchEmoticonCategory(e, appContext) {
   const emoticonPopup = document.querySelector(".emoticons-popup");
   if (!emoticonPopup || (!(["Tab", "KeyH", "KeyL"].includes(e.code)) && !(e.code === "Tab" && e.shiftKey))) return;
   e.preventDefault();
+
   const keys = Object.keys(categories);
   const favs = JSON.parse(localStorage.getItem("favoriteEmoticons")) || [];
   const navKeys = favs.length === 0 ? keys.filter(key => key !== "Favourites") : keys;
   let idx = navKeys.indexOf(state.activeCategory);
   if (idx === -1) idx = 0;
+
   let newIdx = ((e.code === "Tab" && !e.shiftKey) || e.code === "KeyL") && idx < navKeys.length - 1 ? idx + 1 :
     ((e.code === "KeyH" || (e.code === "Tab" && e.shiftKey)) && idx > 0) ? idx - 1 : idx;
   if (newIdx === idx) return;
+
   const next = navKeys[newIdx];
   state.currentSortedEmoticons = getSortedEmoticons(next);
   localStorage.setItem("activeCategory", next);
