@@ -64,12 +64,23 @@ export function navigateEmoticons(e, appContext) {
   const popup = document.querySelector(".emoticons-popup");
   if (!popup) return;
 
-  const handledKeys = new Set(['Enter', 'Semicolon', 'ArrowLeft', 'KeyJ', 'ArrowRight', 'KeyK', 'KeyS']);
+  const handledKeys = new Set([
+    // Insert
+    "Enter", "Semicolon", "KeyA",
+    // Navigate (default keys)
+    "ArrowLeft", "ArrowRight",
+    // Navigate (right hand)
+    "KeyJ", "KeyK",
+    // Navigate (left hand)
+    "KeyS", "KeyF",
+    // Change section
+    "KeyD"
+  ]);
   if (!handledKeys.has(e.code)) return;
   e.preventDefault();
 
-  // Section switch (S key)
-  if (e.code === "KeyS") {
+  // Section switch (D key)
+  if (e.code === "KeyD") {
     const hasRecents = document.querySelector(".recent-emoticon-buttons") !== null;
     if (state.focusedSection === "category" && hasRecents) {
       state.focusedSection = "recent";
@@ -86,7 +97,7 @@ export function navigateEmoticons(e, appContext) {
   }
 
   // Selection and insertion
-  if (e.code === "Enter" || e.code === "Semicolon") {
+  if (e.code === "Enter" || e.code === "Semicolon" || e.code === "KeyA") {
     let emoticon;
     if (state.focusedSection === "category") {
       emoticon = state.lastUsedCategoryEmoticons[state.activeCategory];
@@ -101,10 +112,11 @@ export function navigateEmoticons(e, appContext) {
     return;
   }
 
-  // Arrow / J K navigation within section
-  if (e.code === "ArrowLeft" || e.code === "KeyJ") {
+  // Navigation (backward)
+  if (e.code === "ArrowLeft" || e.code === "KeyJ" || e.code === "KeyS") {
     navigateSelection(-1);
-  } else if (e.code === "ArrowRight" || e.code === "KeyK") {
+  // Navigation (forward)
+  } else if (e.code === "ArrowRight" || e.code === "KeyK" || e.code === "KeyF") {
     navigateSelection(1);
   }
 }
@@ -112,7 +124,7 @@ export function navigateEmoticons(e, appContext) {
 export function switchEmoticonCategory(e, appContext) {
   const { state, getSortedEmoticons, changeActiveCategoryOnClick, updateToggleButtonIcon } = appContext;
   const emoticonPopup = document.querySelector(".emoticons-popup");
-  if (!emoticonPopup || (!(["Tab", "KeyH", "KeyL"].includes(e.code)) && !(e.code === "Tab" && e.shiftKey))) return;
+  if (!emoticonPopup || (!(["Tab", "KeyH", "KeyL", "KeyW", "KeyR"].includes(e.code)) && !(e.code === "Tab" && e.shiftKey))) return;
   e.preventDefault();
 
   const keys = Object.keys(categories);
@@ -121,8 +133,8 @@ export function switchEmoticonCategory(e, appContext) {
   let idx = navKeys.indexOf(state.activeCategory);
   if (idx === -1) idx = 0;
 
-  let newIdx = ((e.code === "Tab" && !e.shiftKey) || e.code === "KeyL") && idx < navKeys.length - 1 ? idx + 1 :
-    ((e.code === "KeyH" || (e.code === "Tab" && e.shiftKey)) && idx > 0) ? idx - 1 : idx;
+  let newIdx = ((e.code === "Tab" && !e.shiftKey) || e.code === "KeyL" || e.code === "KeyR") && idx < navKeys.length - 1 ? idx + 1 :
+    ((e.code === "KeyH" || e.code === "KeyW" || (e.code === "Tab" && e.shiftKey)) && idx > 0) ? idx - 1 : idx;
   if (newIdx === idx) return;
 
   const next = navKeys[newIdx];
