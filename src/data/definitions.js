@@ -254,3 +254,8 @@ export const categories = {
 export const categoryEmojis = {
   Boys: "🎩", Girls: "🎀‍", Christmas: "🎄", Inlove: "❤️", Army: "🔫", Halloween: "🎃", Favourites: "🌟"
 };
+
+export const settings = {
+  maxRecentEmoticons: 20,
+  longPressDelay: 300,
+};

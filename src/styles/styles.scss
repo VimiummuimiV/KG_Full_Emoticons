@@ -16,6 +16,11 @@
     var(--third-accent-color) 25%,
     transparent 85%
   );
+  --label-mix: color-mix(
+    in srgb,
+    var(--background-color) 85%,
+    var(--third-accent-color) 15%
+  );
 }
 
 @mixin button-styles {
@@ -93,6 +98,7 @@ $UIGap: 0.5em;
 
       .category-button {
         @include button-styles;
+        text-shadow: 0 0 0.6px #000000db;
         background: var(--highlight-color, var(--default-button));
 
         &.active {
@@ -111,7 +117,19 @@ $UIGap: 0.5em;
     }
   }
 
-  .emoticon-buttons {
+  .label {
+    font-size: 0.9em !important;
+    font-weight: normal !important;
+    color: var(--third-accent-color, var(--selected-button));
+    padding: 0.2em 0.6em;
+    border-radius: 0.2em !important;
+    background-color: var(--label-mix, var(--default-button));
+    display: inline-flex;
+    margin: 1em 0 0.5em 0;
+  }
+
+  .category-emoticon-buttons,
+  .recent-emoticon-buttons {
     display: grid;
     gap: $UIGap;
     overflow-y: auto;
@@ -181,7 +199,8 @@ $UIGap: 0.5em;
     top: 30px;
     max-height: 70vh;
 
-    .emoticon-buttons {
+    .category-emoticon-buttons,
+    .recent-emoticon-buttons {
       max-height: calc(70vh - 70px);
     }
   }
@@ -216,7 +235,8 @@ $UIGap: 0.5em;
       }
     }
 
-    .emoticon-buttons {
+    .category-emoticon-buttons,
+    .recent-emoticon-buttons {
       display: flex;
       flex-direction: row;
       flex-wrap: wrap;

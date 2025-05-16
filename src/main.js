@@ -1,5 +1,11 @@
 import "./styles/styles.scss";
-import { categories, categoryEmojis } from "./data/definitions.js";
+
+import {
+  categories,
+  categoryEmojis,
+  settings
+} from "./data/definitions.js";
+
 import { clearSVG, closeSVG } from "./data/icons.js";
 import { checkIsMobile } from "./styles/helpers.js";
 
@@ -15,6 +21,7 @@ import { checkIsMobile } from "./styles/helpers.js";
     latestCategoryRequest: null,
     lastKeyTimes: {},
     lastUsedEmoticons: JSON.parse(localStorage.getItem("lastUsedEmoticons")) || {},
+    recentEmoticons: JSON.parse(localStorage.getItem("recentEmoticons")) || [],
     isMobile: checkIsMobile()
   };
 
@@ -32,6 +39,42 @@ import { checkIsMobile } from "./styles/helpers.js";
     } else {
       state.lastKeyTimes[targetKey] = 0;
     }
+  }
+
+  // Create a helper function for long press handling
+  function setupLongPress(container, longPressCallback) {
+    let longPressTimer;
+    let longPressTarget = null;
+
+    // Pointer event handlers for long press (works for both mouse and touch)
+    container.addEventListener("pointerdown", e => {
+      const btn = e.target.closest("button.emoticon-button");
+      if (!btn) return;
+
+      longPressTarget = btn;
+      longPressTimer = setTimeout(() => {
+        if (longPressTarget) {
+          e.preventDefault();
+          longPressCallback(longPressTarget);
+          longPressTarget = null; // Prevent normal click after long press
+        }
+      }, settings.longPressDelay);
+    });
+
+    // Clear timer if pointer moves away or is released before timeout
+    const clearLongPressTimer = () => {
+      if (longPressTimer) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+      }
+    };
+
+    container.addEventListener("pointerup", clearLongPressTimer);
+    container.addEventListener("pointerleave", clearLongPressTimer);
+    container.addEventListener("pointercancel", clearLongPressTimer);
+
+    // Return the target to check in click handlers
+    return () => longPressTarget;
   }
 
   // Initialize state
@@ -105,6 +148,16 @@ import { checkIsMobile } from "./styles/helpers.js";
     data[state.activeCategory] = data[state.activeCategory] || {};
     data[state.activeCategory][emoticon] = (data[state.activeCategory][emoticon] || 0) + 1;
     saveEmoticonUsageData(data);
+  }
+
+  // Function to add emoticon to recent list
+  function addToRecentEmoticons(emoticon) {
+    state.recentEmoticons = [
+      emoticon,
+      ...state.recentEmoticons.filter(e => e !== emoticon)
+    ].slice(0, settings.maxRecentEmoticons);
+
+    localStorage.setItem("recentEmoticons", JSON.stringify(state.recentEmoticons));
   }
 
   function getSortedEmoticons(category) {
@@ -242,6 +295,9 @@ import { checkIsMobile } from "./styles/helpers.js";
     targetInput.value = targetInput.value.slice(0, pos) + code + targetInput.value.slice(pos);
     targetInput.setSelectionRange(pos + code.length, pos + code.length);
     if (!state.isMobile) targetInput.focus();
+
+    // Add to recent emoticons
+    addToRecentEmoticons(emoticon);
   }
 
   // Event listeners cleanup
@@ -339,7 +395,18 @@ import { checkIsMobile } from "./styles/helpers.js";
 
     const clearButton = createBtn("header-button clear-button", "Clear usage data", clearSVG, () => {
       if (confirm("Clear emoticon usage data?")) {
+        // clear usage data
         localStorage.removeItem("emoticonUsageData");
+
+        // clear recent emoticons
+        localStorage.removeItem("recentEmoticons");
+        state.recentEmoticons = [];
+
+        // remove recent-emoticons container from the popup
+        const recentContainer = document.querySelector(".recent-emoticons");
+        if (recentContainer) recentContainer.remove();
+        const categoryLabel = document.querySelector(".category-label");
+        if (categoryLabel) categoryLabel.remove();
       }
     });
 
@@ -349,6 +416,13 @@ import { checkIsMobile } from "./styles/helpers.js";
     headerButtons.appendChild(createCategoryContainer());
     headerButtons.appendChild(closeButton);
     popup.appendChild(headerButtons);
+
+    // Create recent emoticons container if there are any
+    if (state.recentEmoticons.length > 0) {
+      createRecentEmoticonsContainer().then((container) => {
+        popup.appendChild(container);
+      });
+    }
 
     createEmoticonsContainer(category).then((container) => {
       popup.appendChild(container);
@@ -370,6 +444,201 @@ import { checkIsMobile } from "./styles/helpers.js";
     document.body.appendChild(popup);
     toggleContainerSmoothly(popup, "show");
     state.isPopupCreated = true;
+  }
+
+  // Helper function to create a base container
+  function createBaseContainer(className = "category-emoticon-buttons") {
+    const container = document.createElement("div");
+    container.className = className;
+    container.addEventListener("contextmenu", e => e.preventDefault());
+    return container;
+  }
+
+  // Helper function to create emoticon buttons
+  function createEmoticonButton(emoticon, additionalClasses = "") {
+    const btn = document.createElement("button");
+    btn.className = `emoticon-button ${additionalClasses}`;
+    btn.title = emoticon;
+    const imgSrc = `/img/smilies/${emoticon}.gif`;
+    btn.innerHTML = `<img src="${imgSrc}" alt="${emoticon}">`;
+    return { btn, imgSrc };
+  }
+
+  // Helper function to preload images and return promises
+  function preloadEmoticonImage(imgSrc) {
+    return new Promise(resolve => {
+      const img = new Image();
+      img.onload = resolve;
+      img.src = imgSrc;
+    });
+  }
+
+  // Helper function to handle button click events
+  function handleEmoticonButtonClick(e, getLongPressTarget, onClickAction) {
+    const btn = e.target.closest("button.emoticon-button");
+    if (!btn || !getLongPressTarget()) return; // Skip if this was a long press that already triggered
+
+    e.stopPropagation();
+    const emoticon = btn.title;
+
+    onClickAction(emoticon, e);
+  }
+
+  // Helper function to configure grid sizing
+  async function configureEmoticonGrid(container, emoticons) {
+    const { maxImageWidth, maxImageHeight } = await calculateMaxImageDimensions(emoticons);
+    Object.assign(container.style, {
+      gridTemplateColumns: `repeat(auto-fit, minmax(${maxImageWidth}px, 1fr))`,
+      gridAutoRows: `minmax(${maxImageHeight}px, auto)`
+    });
+  }
+
+  async function createRecentEmoticonsContainer() {
+    const container = document.createElement("div");
+    container.className = "recent-emoticons";
+
+    const emoticonButtons = createBaseContainer("recent-emoticon-buttons");
+
+    const label = document.createElement("span");
+    label.className = "label recent-label";
+    label.textContent = "Recently used";
+    container.appendChild(label);
+
+    // Setup long press for removing recent emoticons
+    const getLongPressTarget = setupLongPress(emoticonButtons, (target) => {
+      handleRecentsClick(target.title, target);
+    });
+
+    // Preload images and populate DOM
+    const loadPromises = state.recentEmoticons.map(emoticon => {
+      const { btn, imgSrc } = createEmoticonButton(emoticon, "recent-button");
+      emoticonButtons.appendChild(btn);
+      return preloadEmoticonImage(imgSrc);
+    });
+
+    // Helper function to remove emoticon from recents
+    function handleRecentsClick(emoticon, target) {
+      const index = state.recentEmoticons.indexOf(emoticon);
+      if (index !== -1) {
+        state.recentEmoticons.splice(index, 1);
+        localStorage.setItem("recentEmoticons", JSON.stringify(state.recentEmoticons));
+        // Remove only the specific emoticon button
+        target.remove();
+        // If no more recent emoticons, remove the entire recent section (including its label)
+        if (state.recentEmoticons.length === 0) {
+          const recentsSection = document.querySelector(".recent-emoticons");
+          if (recentsSection) recentsSection.remove();
+        }
+      }
+    }
+
+    // Click handler for recent emoticons
+    emoticonButtons.addEventListener("click", e =>
+      handleEmoticonButtonClick(e, getLongPressTarget, (emoticon, event) => {
+        // Handle ctrl+click to remove recent emoticon
+        if (event.ctrlKey) {
+          handleRecentsClick(emoticon, event.target.closest("button.emoticon-button"));
+          return;
+        }
+
+        insertEmoticonCode(emoticon);
+        incrementEmoticonUsage(emoticon);
+        state.lastUsedEmoticons[state.activeCategory] = emoticon;
+        localStorage.setItem("lastUsedEmoticons", JSON.stringify(state.lastUsedEmoticons));
+
+        if (!state.isMobile && !event.shiftKey) removeEmoticonsPopup();
+        updateEmoticonHighlight();
+      })
+    );
+
+    // Wait for all images, then set grid sizing
+    await Promise.all(loadPromises);
+    await configureEmoticonGrid(emoticonButtons, state.recentEmoticons);
+
+    container.appendChild(emoticonButtons);
+    return container;
+  }
+
+  async function createEmoticonsContainer(category) {
+    const container = document.createElement("div");
+    container.className = "category-emoticons";
+
+    const emoticonButtons = createBaseContainer();
+
+    if (state.recentEmoticons.length > 0) {
+      // look in the document instead of in this newly created container
+      if (!document.querySelector(".category-emoticons .category-label")) {
+        const label = document.createElement("span");
+        label.className = "label category-label";
+        label.textContent = "Category section";
+        container.appendChild(label);
+      }
+    }
+
+    state.currentSortedEmoticons = getSortedEmoticons(category);
+
+    // Helper function to toggle favorite status
+    const toggleFavorite = (emoticon) => {
+      const fav = JSON.parse(localStorage.getItem("favoriteEmoticons")) || [];
+      const idx = fav.indexOf(emoticon);
+      if (category === "Favourites" && idx !== -1) {
+        fav.splice(idx, 1);
+        categories.Favourites.splice(idx, 1);
+      } else if (category !== "Favourites" && idx === -1) {
+        fav.push(emoticon);
+        categories.Favourites.push(emoticon);
+      }
+      localStorage.setItem("favoriteEmoticons", JSON.stringify(fav));
+      updateCategoryButtonsState(category);
+      if (category === "Favourites") updateEmoticonsContainer();
+      updateEmoticonHighlight();
+    };
+
+    // Setup long press for toggling favorites
+    const getLongPressTarget = setupLongPress(emoticonButtons, (target) => {
+      const emoticon = target.title;
+      toggleFavorite(emoticon);
+    });
+
+    // Preload images and populate DOM
+    const loadPromises = state.currentSortedEmoticons.map(emoticon => {
+      let additionalClass = "";
+      if (emoticon === state.lastUsedEmoticons[state.activeCategory]) {
+        additionalClass = "selected";
+      } else if (state.activeCategory !== "Favourites" && isEmoticonFavorite(emoticon)) {
+        additionalClass = "favorite";
+      }
+
+      const { btn, imgSrc } = createEmoticonButton(emoticon, additionalClass);
+      emoticonButtons.appendChild(btn);
+      return preloadEmoticonImage(imgSrc);
+    });
+
+    // Delegate all click handling to the emoticonButtons
+    emoticonButtons.addEventListener("click", e =>
+      handleEmoticonButtonClick(e, getLongPressTarget, (emoticon, event) => {
+        if (event.shiftKey) {
+          insertEmoticonCode(emoticon);
+        } else if (event.ctrlKey) {
+          // toggle favorite with ctrl+click
+          toggleFavorite(emoticon);
+        } else {
+          insertEmoticonCode(emoticon);
+          incrementEmoticonUsage(emoticon);
+          state.lastUsedEmoticons[state.activeCategory] = emoticon;
+          localStorage.setItem("lastUsedEmoticons", JSON.stringify(state.lastUsedEmoticons));
+          if (!state.isMobile) removeEmoticonsPopup();
+        }
+        updateEmoticonHighlight();
+      })
+    );
+
+    // wait for all images, then set grid sizing
+    await Promise.all(loadPromises);
+    await configureEmoticonGrid(emoticonButtons, state.currentSortedEmoticons);
+
+    container.appendChild(emoticonButtons);
+    return container;
   }
 
   function createCategoryContainer() {
@@ -455,125 +724,6 @@ import { checkIsMobile } from "./styles/helpers.js";
     updateToggleButtonIcon();
   }
 
-  // Emoticon container creation
-  async function createEmoticonsContainer(category) {
-    const container = document.createElement("div");
-    container.className = "emoticon-buttons";
-
-    container.addEventListener("contextmenu", e => e.preventDefault());
-
-    state.currentSortedEmoticons = getSortedEmoticons(category);
-
-    // For long press functionality
-    let longPressTimer;
-    let longPressTarget = null;
-    const longPressDelay = 300;
-
-    // Preload images and populate DOM
-    const loadPromises = state.currentSortedEmoticons.map(emoticon => {
-      const btn = document.createElement("button");
-      btn.className = "emoticon-button";
-      btn.title = emoticon;
-      const imgSrc = `/img/smilies/${emoticon}.gif`;
-      btn.innerHTML = `<img src="${imgSrc}" alt="${emoticon}">`;
-
-      // mark selected/favorite
-      if (emoticon === state.lastUsedEmoticons[state.activeCategory]) {
-        btn.classList.add("selected");
-      } else if (state.activeCategory !== "Favourites" && isEmoticonFavorite(emoticon)) {
-        btn.classList.add("favorite");
-      }
-
-      container.appendChild(btn);
-
-      // return promise that resolves when image loads
-      return new Promise(resolve => {
-        const img = new Image();
-        img.onload = resolve;
-        img.src = imgSrc;
-      });
-    });
-
-    // Helper function to toggle favorite status
-    const toggleFavorite = (emoticon) => {
-      const fav = JSON.parse(localStorage.getItem("favoriteEmoticons")) || [];
-      const idx = fav.indexOf(emoticon);
-      if (category === "Favourites" && idx !== -1) {
-        fav.splice(idx, 1);
-        categories.Favourites.splice(idx, 1);
-      } else if (category !== "Favourites" && idx === -1) {
-        fav.push(emoticon);
-        categories.Favourites.push(emoticon);
-      }
-      localStorage.setItem("favoriteEmoticons", JSON.stringify(fav));
-      updateCategoryButtonsState(category);
-      if (category === "Favourites") updateEmoticonsContainer();
-      updateEmoticonHighlight();
-    };
-
-    // Pointer event handlers for long press (works for both mouse and touch)
-    container.addEventListener("pointerdown", e => {
-      const btn = e.target.closest("button.emoticon-button");
-      if (!btn) return;
-
-      longPressTarget = btn;
-      longPressTimer = setTimeout(() => {
-        if (longPressTarget) {
-          e.preventDefault();
-          const emoticon = longPressTarget.title;
-          toggleFavorite(emoticon);
-          longPressTarget = null; // Prevent normal click after long press
-        }
-      }, longPressDelay);
-    });
-
-    // Clear timer if pointer moves away or is released before timeout
-    const clearLongPressTimer = () => {
-      if (longPressTimer) {
-        clearTimeout(longPressTimer);
-        longPressTimer = null;
-      }
-    };
-
-    container.addEventListener("pointerup", clearLongPressTimer);
-    container.addEventListener("pointerleave", clearLongPressTimer);
-    container.addEventListener("pointercancel", clearLongPressTimer);
-
-    // Delegate all click handling to the container
-    container.addEventListener("click", e => {
-      const btn = e.target.closest("button.emoticon-button");
-      if (!btn || !longPressTarget) return; // Skip if this was a long press that already triggered
-
-      e.stopPropagation();
-      const emoticon = btn.title;
-
-      if (e.shiftKey) {
-        insertEmoticonCode(emoticon);
-      } else if (e.ctrlKey) {
-        // toggle favorite with ctrl+click
-        toggleFavorite(emoticon);
-      } else {
-        insertEmoticonCode(emoticon);
-        incrementEmoticonUsage(emoticon);
-        state.lastUsedEmoticons[state.activeCategory] = emoticon;
-        localStorage.setItem("lastUsedEmoticons", JSON.stringify(state.lastUsedEmoticons));
-        if (!state.isMobile) removeEmoticonsPopup();
-      }
-
-      updateEmoticonHighlight();
-    });
-
-    // wait for all images, then set grid sizing
-    await Promise.all(loadPromises);
-    const { maxImageWidth, maxImageHeight } = await calculateMaxImageDimensions(state.currentSortedEmoticons);
-    Object.assign(container.style, {
-      gridTemplateColumns: `repeat(auto-fit, minmax(${maxImageWidth}px, 1fr))`,
-      gridAutoRows: `minmax(${maxImageHeight}px, auto)`
-    });
-
-    return container;
-  }
-
   async function calculateMaxImageDimensions(emoticonsImages) {
     const minValue = 34;
     const imageDimensions = await Promise.all(
@@ -594,13 +744,13 @@ import { checkIsMobile } from "./styles/helpers.js";
     const requestTimestamp = Date.now();
     state.latestCategoryRequest = requestTimestamp;
 
-    // Remove all old containers
-    document.querySelectorAll(".emoticon-buttons").forEach(container => container.remove());
+    // Remove the entire old category-emoticons wrapper (including its label) to avoid duplicates
+    const oldSection = document.querySelector(".category-emoticons");
+    if (oldSection) oldSection.remove();
 
+    // Create a fresh emoticons container and append if it's still the latest
     createEmoticonsContainer(state.activeCategory).then((container) => {
-      // Ensure this is still the latest request before appending
       if (state.latestCategoryRequest !== requestTimestamp) return;
-
       const popup = document.querySelector(".emoticons-popup");
       if (popup) {
         popup.appendChild(container);
@@ -612,7 +762,7 @@ import { checkIsMobile } from "./styles/helpers.js";
   // Navigation and selection
   function updateEmoticonHighlight() {
     requestAnimationFrame(() => {
-      const buttons = document.querySelectorAll(".emoticon-buttons button");
+      const buttons = document.querySelectorAll(".category-emoticon-buttons button");
       buttons.forEach((btn) => {
         const emoticon = btn.title;
         btn.classList.remove("selected", "favorite");
