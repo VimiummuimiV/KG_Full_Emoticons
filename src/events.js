@@ -15,7 +15,7 @@ export function onKeyDown(e, appContext) {
     return;
   }
   if (e.code === 'KeyQ') {
-    handleDoubleKeyPress(e, 'KeyQ', 500, function () {
+    handleDoubleKeyPress(e, 'KeyQ', 150, function () {
       if (state.lastFocusedInput) {
         let value = state.lastFocusedInput.value;
         if (value.length >= 2 && value.slice(-1) === value.slice(-2, -1)) {
